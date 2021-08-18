@@ -232,7 +232,7 @@ route.post('/filter', async (req, res) => {
     let cityFetched
 
     let data = {
-
+        isApproved:true
     }
 
 
@@ -350,7 +350,7 @@ route.post('/filter', async (req, res) => {
         { $project: { rating: 0 } },
     ]).exec(async (error, doctors) => {
        
-        let count = await Doctor.countDocuments().exec()
+        let count = await Doctor.countDocuments(data).exec()
         res.status(201).json({ success: true, doctors, categoryFetched, countryFetched, cityFetched, count })
         console.log(error);
     })
