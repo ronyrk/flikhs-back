@@ -4,7 +4,9 @@ const slugify = require('slugify')
 const Country = require('../model/countryCity.model')
 const Department = require('../model/department.model')
 const Doctor = require('../model/doctor.model')
+const DoctorReview = require('../model/doctorReview.model')
 const { usersignin, admin, moderator } = require('../middleware/auth.middleware')
+const mongoose = require('mongoose')
 
 const createList = (countries, parentId = null) => {
     const countryList = []
@@ -238,7 +240,7 @@ route.post('/filter', async (req, res) => {
     if (category) {
         let fetchedCategory = await Department.findOne({ slug: category }).exec()
         if (fetchedCategory) {
-            data.category = fetchedCategory._id
+            data.category = mongoose.Types.ObjectId(fetchedCategory._id)
             categoryFetched = fetchedCategory
         }
 
@@ -246,7 +248,7 @@ route.post('/filter', async (req, res) => {
     if (country) {
         let fetchedCountry = await Country.findOne({ slug: country }).exec()
         if (fetchedCountry) {
-            data["general.country"] = fetchedCountry._id
+            data["general.country"] = mongoose.Types.ObjectId(fetchedCountry._id)
             countryFetched = fetchedCountry
         }
 
@@ -254,7 +256,7 @@ route.post('/filter', async (req, res) => {
     if (city) {
         let fetchedCity = await Country.findOne({ slug: city }).exec()
         if (fetchedCity) {
-            data["general.city"] = fetchedCity._id
+            data["general.city"] = mongoose.Types.ObjectId(fetchedCity._id)
             cityFetched = fetchedCity
         }
     }
@@ -288,28 +290,177 @@ route.post('/filter', async (req, res) => {
     }
 
 
-
-    try {
-
+    Doctor.aggregate([
+        { $match: data },
+        { $skip: pageOptions.page * pageOptions.limit },
+        { $limit: pageOptions.limit },
+        { $sort: sort },
+        {
+            $lookup:
+            {
+                from: "doctorreviews",
+                let: { id: '$_id' },
+                pipeline: [
+                    {
+                        "$match": {
+                            "$expr": {
+                                "$and": [
+                                    { "$eq": ["$doctor", '$$id'] },
+                                ]
+                            }
+                        }
+                    },
+                ],
+                as: "rating"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "countries",
+                localField: "general.country",
+                foreignField: "_id",
+                as: "country"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "countries",
+                localField: "general.city",
+                foreignField: "_id",
+                as: "city"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "departments",
+                localField: "category",
+                foreignField: "_id",
+                as: "category"
+            }
+        },
+        {
+            $addFields: {
+                ratingCount: { $size: "$rating" },
+                average: { $avg: "$rating.rating" }
+            }
+        },
+        { $project: { rating: 0 } },
+    ]).exec(async (error, doctors) => {
+       
         let count = await Doctor.countDocuments().exec()
-        let doctors = await Doctor.find(data)
-            .populate('category')
-            .populate('general.city')
-            .populate('general.country')
-            .sort(sort)
-            .skip(pageOptions.page * pageOptions.limit)
-            .limit(pageOptions.limit)
-            .exec()
-          
-        //console.log(products);
-        res.status(201).json({ success: true, doctors, categoryFetched, countryFetched, cityFetched ,count})
-
-    } catch (error) {
+        res.status(201).json({ success: true, doctors, categoryFetched, countryFetched, cityFetched, count })
         console.log(error);
-        res.status(400).json({ error: "something went wrong" })
-    }
+    })
+
+
+
+    // try {
+
+    //     let count = await Doctor.countDocuments().exec()
+    //     let doctors = await Doctor.find(data)
+    //         .populate('category')
+    //         .populate('general.city')
+    //         .populate('general.country')
+    //         .sort(sort)
+    //         .skip(pageOptions.page * pageOptions.limit)
+    //         .limit(pageOptions.limit)
+    //         .exec()
+
+    //     //console.log(products);
+    //     res.status(201).json({ success: true, doctors, categoryFetched, countryFetched, cityFetched, count })
+
+    // } catch (error) {
+    //     console.log(error);
+    //     res.status(400).json({ error: "something went wrong" })
+    // }
 
 })
 
+
+
+//review-------------------------------------------------------------------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------------------------------------------
+route.post("/review/create", (req, res) => {
+    const { name, replyId, doctor, rating, comment } = req.body
+    if (!name) {
+        return res.status(400).json({ error: "name is required" })
+    }
+    if (!doctor) {
+        return res.status(400).json({ error: "Doctor ID is required" })
+    }
+    let obj = {
+        name,
+        name,
+        doctor,
+        rating,
+        comment
+    }
+    if (replyId) {
+        obj.replyId = replyId
+    }
+    let _review = new DoctorReview(obj)
+
+    _review.save()
+        .then(review => {
+            res.status(201).json({
+                success: true,
+                review
+            })
+        })
+        .catch(err => {
+            res.status(400).json({ error: "Something went wrong" })
+        })
+})
+//------------------------------------------------------------------------------------------------------------------------------------------
+const createReviewList = (reviews, replyId = null) => {
+    const reviewList = []
+    let review
+    if (replyId == null) {
+        review = reviews.filter(rev => rev.replyId == undefined)
+    } else {
+        review = reviews.filter(rev => rev.replyId == replyId)
+    }
+    for (let rev of review) {
+        reviewList.push({
+            _id: rev._id,
+            name: rev.name,
+            rating: rev.rating,
+            comment: rev.comment,
+            createdAt: rev.createdAt,
+            replies: createReviewList(reviews, rev._id)
+        })
+    }
+    return reviewList
+}
+
+route.get('/review/get/:doctorid', (req, res) => {
+    let doctorId = req.params.doctorid
+
+
+    DoctorReview.aggregate([
+        { $match: { doctor: mongoose.Types.ObjectId(doctorId) } },
+        {
+            $group: {
+                _id: "$rating",
+                count: { $sum: 1 },
+                totaStar: { $sum: { $multiply: [{ $sum: 1 }, "$rating"] } }
+            }
+        },
+    ]).exec(async (error, result) => {
+        let reviews = await DoctorReview.find({ doctor: doctorId })
+            .sort('-createdAt')
+            .limit(30)
+            .exec()
+        let reviewsCount = result.reduce((a, b) => +a + +b.count, 0);
+        let totalStarCount = result.reduce((a, b) => +a + +b.totaStar, 0);
+        let average = (totalStarCount / reviewsCount).toFixed(1)
+        res.status(200).json({ success: true, reviewsStats: result, reviews: createReviewList(reviews), reviewsCount, average })
+    })
+
+})
 
 module.exports = route
