@@ -17,6 +17,10 @@ const departmnetSchema = new mongoose.Schema({
     type: String,
     default:""
   },
+  isFeatured:{
+    type:Boolean,
+    default:false
+  }
 }, { timestamps: true })
 
 

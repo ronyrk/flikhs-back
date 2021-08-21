@@ -8,18 +8,24 @@ const { usersignin, admin,moderator } = require('../middleware/auth.middleware')
 
 
 //---------------------------------------------------------------------------------------------------------------
-route.post("/create", usersignin, moderator, (req, res) => {
-    const { name, image } = req.body
+route.post("/create", usersignin, moderator, async (req, res) => {
+    const { name, image ,isFeatured} = req.body
     if (!name) {
         return res.status(400).json({ error: "name is required" })
     }
     let obj = {
         name,
         slug: slugify(name),
-        image
+        image,
+        isFeatured
     }
    
     let _department = new Department(obj)
+
+    let isDeptExists = await Department.findOne({slug:slugify(name)})
+    if(isDeptExists){
+        return  res.status(400).json({ error: "Deparment already exists" })
+    }
 
     _department.save()
         .then(department => {
@@ -29,6 +35,7 @@ route.post("/create", usersignin, moderator, (req, res) => {
             })
         })
         .catch(err => {
+            console.log(err);
             res.status(400).json({ error: "Something went wrong" })
         })
 })
@@ -37,7 +44,6 @@ route.post("/create", usersignin, moderator, (req, res) => {
 //---------------------------------------------------------------------------------------------------------------
 route.get('/get', (req, res) => {
     Department.find()
-        .sort("name")
         .then(departments => {
             
             res.status(200).json({
@@ -53,14 +59,15 @@ route.get('/get', (req, res) => {
 
 //---------------------------------------------------------------------------------------------------------------
 route.patch("/edit/:id", usersignin, moderator, (req, res) => {
-    const { name,image } = req.body
+    const { name,image,isFeatured } = req.body
     let id = req.params.id
     if (!name || !id) {
         res.status(400).json({ error: "id and name is required" })
     }
 
     let data ={
-        name
+        name,
+        isFeatured
     }
 
     if(image){
