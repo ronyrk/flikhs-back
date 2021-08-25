@@ -52,7 +52,14 @@ const doctorSchema = new mongoose.Schema({
     ],
     category:[{ type: mongoose.Schema.Types.ObjectId, ref: "Department"}],
     profileImage:{type:String,default:""},
-    isApproved:{type:Boolean,default:false}
+    isApproved:{type:Boolean,default:false},
+    slug: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true
+      },
 
 }, { timestamps: true })
 

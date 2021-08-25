@@ -7,6 +7,7 @@ const Doctor = require('../model/doctor.model')
 const DoctorReview = require('../model/doctorReview.model')
 const { usersignin, admin, moderator } = require('../middleware/auth.middleware')
 const mongoose = require('mongoose')
+const shortId = require('shortid')
 
 const createList = (countries, parentId = null) => {
     const countryList = []
@@ -39,64 +40,7 @@ route.get('/initialdata', async (req, res) => {
     }
 })
 
-// {
-//     "general":{
-//        "name":"Md shimul",
-//        "title":"this is a demo title",
-//        "gender":"male",
-//        "age":"25 - 30",
-//        "country":"610e1770057c8655f823b9c3",
-//        "city":"610e1778057c8655f823b9c4",
-//        "address":"99/6,Nasiruddin sardar len,Sutrapur, Dhaka",
-//        "zip":"457",
-//        "phone":"03454534534",
-//        "website":"http://localhost:4000/add-doctor",
-//        "newPatient":"true",
-//        "teleHealth":"true"
-//     },
-//     "about":"<p>fdhh</p>",
-//     "education":[
-//        {
-//           "academyName":"gr",
-//           "academyAddress":"99/6,Nasiruddin sardar len,Sutrapur, Dhaka",
-//           "from":"2003",
-//           "to":"2002"
-//        }
-//     ],
-//     "hospital":[
-//        {
-//           "hospitalName":"sad",
-//           "hospitalAddress":"99/6,Nasiruddin sardar len,Sutrapur, Dhaka",
-//           "call":"fdgfg",
-//           "from":"10",
-//           "fromFormat":"am",
-//           "to":"",
-//           "toFormat":"",
-//           "cal":"h"
-//        }
-//     ],
-//     "experience":[
-//        {
-//           "academyName":"gr",
-//           "academyAddress":"99/6,Nasiruddin sardar len,Sutrapur, Dhaka",
-//           "from":"2003",
-//           "to":""
-//        }
-//     ],
-//     "language":[
-//        "English"
-//     ],
-//     "social":[
-//        {
-//           "socialLink":"http://localhost:3000/add-doctor",
-//           "socialName":"Instagram"
-//        }
-//     ],
-//     "category":[
-//        "610e25a3ca7941428ce6f692"
-//     ],
-//     "profileImage":"https://res.cloudinary.com/shimul/image/upload/v1628788556/gecuuohp55ggdexv3hfq.jpg"
-//  }
+
 
 //---------------------------------------------------------------------------------------------------------------
 
@@ -116,7 +60,8 @@ route.post("/create", (req, res) => {
         language,
         social,
         category,
-        profileImage
+        profileImage,
+        slug: slugify(general.name) + "-" + shortId.generate()
     }
 
 
@@ -179,11 +124,55 @@ route.delete('/deletedoctor/:id', usersignin, admin, (req, res) => {
 })
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
-route.get('/getall/:type', usersignin, admin, (req, res) => {
+route.post('/getall/:type', usersignin, admin, async (req, res) => {
+
+
+    let { page, sort_by, limit, query } = req.body
     let type = req.params.type
-    Doctor.find({ isApproved: type === 'pending' ? false : true })
-        .then(doctors => {
-            res.status(201).json({ success: true, doctors })
+    let queryData = {
+        isApproved: type === 'pending' ? false : true
+    }
+
+
+
+    if (query) {
+        queryData["general.name"] = { $regex: query, $options: "i" }
+
+    }
+
+
+    const pageOptions = {
+        page: 0,
+        limit: limit || 30
+    }
+
+    let sort = { "createdAt": -1 }
+
+    if (sort_by == 'newest') {
+        sort = { "createdAt": -1 }
+    }
+    if (sort_by == 'oldest') {
+        sort = { "createdAt": 1 }
+    }
+    if (sort_by == 'price-asc') {
+        sort = { "price": 1 }
+    }
+    if (sort_by == 'price-desc') {
+        sort = { "price": -1 }
+    }
+
+
+    if (page) {
+        pageOptions["page"] = parseInt(page == 0 ? 0 : page - 1, 10) || 0
+    }
+
+    Doctor.find(queryData)
+        .skip(pageOptions.page * pageOptions.limit)
+        .limit(pageOptions.limit)
+        .sort(sort)
+        .then(async doctors => {
+            let count = await Doctor.countDocuments(queryData).exec()
+            res.status(201).json({ success: true, doctors, count })
         })
         .catch(err => {
             console.log(err);
@@ -207,9 +196,9 @@ route.get('/single/:id', (req, res) => {
 })
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
-route.get('/singledoctor/:id', (req, res) => {
-    let id = req.params.id
-    Doctor.findById(id)
+route.get('/singledoctor/:slug', (req, res) => {
+    let slug = req.params.slug
+    Doctor.findOne({ slug })
         .populate('category')
         .populate('general.city')
         .populate('general.country')
@@ -232,7 +221,7 @@ route.post('/filter', async (req, res) => {
     let cityFetched
 
     let data = {
-        isApproved:true
+        isApproved: true
     }
 
 
@@ -349,7 +338,7 @@ route.post('/filter', async (req, res) => {
         },
         { $project: { rating: 0 } },
     ]).exec(async (error, doctors) => {
-       
+
         let count = await Doctor.countDocuments(data).exec()
         res.status(201).json({ success: true, doctors, categoryFetched, countryFetched, cityFetched, count })
         console.log(error);
@@ -460,6 +449,54 @@ route.get('/review/get/:doctorid', (req, res) => {
         let average = (totalStarCount / reviewsCount).toFixed(1)
         res.status(200).json({ success: true, reviewsStats: result, reviews: createReviewList(reviews), reviewsCount, average })
     })
+
+})
+
+
+
+route.get('/allreview', usersignin, (req, res) => {
+    DoctorReview.find()
+        .sort("-createdAt")
+        .populate('doctor', 'general')
+        .then(reviews => {
+            res.status(200).json({ success: true, reviews })
+        })
+        .catch(err => {
+            res.status(400).json({ error: "Something went wrong" })
+        })
+})
+
+
+route.patch('/review/update/:reviewid', usersignin, (req, res) => {
+    let reviewId = req.params.reviewid
+
+    const { rating, comment } = req.body
+    let data = {
+        rating,
+        comment
+    }
+
+    DoctorReview.findByIdAndUpdate(reviewId, { $set: data }, { new: true })
+        .populate('doctor', 'general')
+        .then(review => {
+            res.status(200).json({ success: true, review })
+        })
+        .catch(err => {
+            res.status(400).json({ error: "Something went wrong" })
+        })
+})
+
+
+route.delete('/review/delete/:reviewid', usersignin, (req, res) => {
+    let reviewId = req.params.reviewid
+
+    DoctorReview.findByIdAndDelete(reviewId)
+        .then(review => {
+            res.status(200).json({ success: true })
+        })
+        .catch(err => {
+            res.status(400).json({ error: "Something went wrong" })
+        })
 
 })
 
