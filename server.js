@@ -95,6 +95,7 @@ app.use('/general', require('./routes/general'))
 app.use('/doctor', require('./routes/doctor'))
 app.use('/doctor/country', require('./routes/country'))
 app.use('/doctor/department', require('./routes/department'))
+app.use('/doctor/article', require('./routes/doctorArticle'))
 
 app.get('/', (req, res) => {
     res.json({ message: "server is running..." })
