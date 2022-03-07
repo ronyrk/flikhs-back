@@ -32,7 +32,7 @@ route.get('/initialdata', async (req, res) => {
     try {
         let countrylist = await Country.find().sort('name').exec()
         let countries = createList(countrylist)
-        let departments = await Department.find().exec()
+        let departments = await Department.find().sort('name').exec()
 
         res.status(200).json({ countries, departments })
     } catch (error) {
