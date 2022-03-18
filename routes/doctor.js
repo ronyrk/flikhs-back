@@ -8,6 +8,7 @@ const DoctorReview = require('../model/doctorReview.model')
 const { usersignin, admin, moderator } = require('../middleware/auth.middleware')
 const mongoose = require('mongoose')
 const shortId = require('shortid')
+const puppeteer = require('puppeteer');
 
 const createList = (countries, parentId = null) => {
     const countryList = []
@@ -498,6 +499,121 @@ route.delete('/review/delete/:reviewid', usersignin, (req, res) => {
             res.status(400).json({ error: "Something went wrong" })
         })
 
+})
+
+
+
+route.post('/datascrap', async (req, res) => {
+        if(!req.body.url){
+            return res.status(400).json({error:"Url is required"})
+        }
+    try {
+        const browser = await puppeteer.launch()
+        const page = await browser.newPage()
+        await page.goto(req.body.url)
+        let name = await page.evaluate(() => {
+            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div:nth-child(2) > h1')?.textContent
+        })
+        let category = await page.evaluate(() => {
+            return Array.from(document.querySelectorAll('#about-me-section section[data-qa-target="about-me-specialties"] ul > li > span')).map(x => x?.textContent)
+        })
+        let language = await page.evaluate(() => {
+            return Array.from(document.querySelectorAll('#about-me-languages > div > ul > li > span')).map(x => x?.textContent)
+        })
+        let gender = await page.evaluate(() => {
+            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div:nth-child(2) > p > span.summary-header-row-gender-age > span:nth-child(2)')?.textContent
+        })
+        let age = await page.evaluate(() => {
+            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div:nth-child(2) > p > span.summary-header-row-gender-age > span:nth-child(4)')?.textContent
+        })
+        let address = await page.evaluate(() => {
+            let parent = document.querySelector('.address .office-title')
+            // console.log(parent);
+            return Array.from(parent?.childNodes).map(x => x?.textContent)
+        })
+        let phone = await page.evaluate(() => {
+            return document.querySelector('#premium-visit-section > section > div > div > section > div > div.office-location-content-ctas > div > a > div')?.textContent
+
+        })
+        let newPatient = await page.evaluate(() => {
+            return Boolean(document.querySelector('#first-sidebar-container > div:nth-child(1) > div > div > span')?.textContent)
+
+        })
+        let profileImage = await page.evaluate(() => {
+            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div.summary-designated-header-image-container > img')?.src
+
+        })
+
+
+         await page.click('.about-me-bio-read-more')
+
+        // page.evaluate(async () => {
+        //     await Promise.all([
+        //         page.click(".about-me-bio-read-more"),
+        //         //The page.waitFor is set to 15000 for my personal use. 
+        //         //Feel free to play around with this.
+        //        // page.waitFor(15000)
+        //     ]);
+        // });
+
+        let about = await page.evaluate(async () => {
+             //Array.from(document.querySelectorAll('.about-me-bio-read-more')).map(x=>x?.click())
+            return document.querySelector('#learn-bio')?.textContent
+        })
+
+        const education = await page.evaluate(() => {
+            let cards = document.querySelectorAll('#about-me-section > div:nth-child(4) > div > section > div > div > div > div > div > div > div.education-card-content')
+
+            let array = Promise.all(Array.from(cards).map((card) => {
+                let value = {}
+                let from = card.querySelector('.timeline-date')?.textContent
+                let academyName = card.querySelector('.education-name')?.textContent
+                let academyAddress = card.querySelector('.education-completed')?.textContent
+                if (from) {
+                    value.from = from
+                }
+                if (academyName) {
+                    value.academyName = academyName
+                }
+                if (academyAddress) {
+                    value.academyAddress = academyAddress
+                }
+
+                return value
+            }))
+
+            return array
+        })
+
+
+        const hospital = await page.evaluate(() => {
+            let cards = document.querySelectorAll('#premium-hospital-section > section.profile-subsection > section.hospital-card > div:nth-child(1)')
+
+            let array = Promise.all(Array.from(cards).map((card) => {
+                let value = {}
+                let hospitalName = card.querySelector('.hospital-name span[data-qa-target="hospital-name"]')?.textContent
+                let hospitalAddress = card.querySelector('.hospital-location')?.textContent
+
+                if (hospitalName) {
+                    value.hospitalName = hospitalName
+                }
+                if (hospitalAddress) {
+                    value.hospitalAddress = hospitalAddress
+                }
+
+                return value
+            }))
+
+            return array
+        })
+
+
+        browser.close()
+        res.status(200).json({ success: true, name, category, gender, address, phone, newPatient, about, education, language, profileImage, age ,hospital})
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({ error: "Something went wrong" })
+    }
 })
 
 module.exports = route
