@@ -528,10 +528,10 @@ route.post('/datascrap', async (req, res) => {
             return Array.from(document.querySelectorAll('#about-me-languages > div > ul > li > span')).map(x => x?.textContent)
         })
         let gender = await page.evaluate(() => {
-            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div:nth-child(2) > p > span.summary-header-row-gender-age > span:nth-child(2)')?.textContent
+            return document.querySelector('span.summary-header-row-gender-age span[data-qa-target="ProviderDisplayGender"]')?.textContent
         })
         let age = await page.evaluate(() => {
-            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div:nth-child(2) > p > span.summary-header-row-gender-age > span:nth-child(4)')?.textContent
+            return document.querySelector('span.summary-header-row-gender-age span[data-qa-target="ProviderDisplayAge"]')?.textContent
         })
         let address = await page.evaluate(() => {
             let parent = document.querySelector('.address .office-title')
@@ -539,15 +539,16 @@ route.post('/datascrap', async (req, res) => {
             return Array.from(parent?.childNodes).map(x => x?.textContent)
         })
         let phone = await page.evaluate(() => {
-            return document.querySelector('#premium-visit-section > section > div > div > section > div > div.office-location-content-ctas > div > a > div')?.textContent
+            return document.querySelector('.toggle-phone-number-button')?.textContent
 
         })
+        
         let newPatient = await page.evaluate(() => {
             return Boolean(document.querySelector('#first-sidebar-container > div:nth-child(1) > div > div > span')?.textContent)
 
         })
         let profileImage = await page.evaluate(() => {
-            return document.querySelector('img.summary-provider-image-xl')?.src
+            return document.querySelector('img[data-qa-target="ProviderImage"]')?.src
 
         })
 
