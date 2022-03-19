@@ -519,7 +519,7 @@ route.post('/datascrap', async (req, res) => {
         const page = await browser.newPage()
         await page.goto(req.body.url)
         let name = await page.evaluate(() => {
-            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div:nth-child(2) > h1')?.textContent
+            return document.querySelector('h1[data-qa-target="ProviderDisplayName"]')?.textContent
         })
         let category = await page.evaluate(() => {
             return Array.from(document.querySelectorAll('#about-me-section section[data-qa-target="about-me-specialties"] ul > li > span')).map(x => x?.textContent)
@@ -547,7 +547,7 @@ route.post('/datascrap', async (req, res) => {
 
         })
         let profileImage = await page.evaluate(() => {
-            return document.querySelector('#summary-section > div > div > div.designated-summary-content-container.hg-right-bar-layout > div.designated-summary-info-container.dark-bg > div.summary-designated-header-image.summary-designated-header-image-compressed > div.summary-designated-header-image-container > img')?.src
+            return document.querySelector('img.summary-provider-image-xl')?.src
 
         })
 
