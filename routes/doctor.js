@@ -536,10 +536,27 @@ route.post('/datascrap', async (req, res) => {
         let address = await page.evaluate(() => {
             let parent = document.querySelector('.address .office-title')
             // console.log(parent);
-            return Array.from(parent?.childNodes).map(x => x?.textContent)
+            
+             
+            
+            if(parent){
+                let hospitalName = parent.querySelector('a')?.textContent
+                let otherAddress =  Array.from(parent?.querySelectorAll('span')).map(x => x?.textContent)
+                let streetAddress =  Array.from(parent?.querySelectorAll('span.street-address')).map(x => x?.textContent)
+                return {
+                    hospitalName,
+                    streetAddress,
+                    otherAddress
+                }
+            }
+           
         })
+        
         let phone = await page.evaluate(() => {
-            return document.querySelector('.toggle-phone-number-button')?.textContent
+            let num1 = document.querySelector('div[data-qa-target="new-number"]')?.textContent||null
+            let num2 = document.querySelector('a.hg-track.detail-link.phone-number')?.textContent||null
+            return num1 || num2
+            
 
         })
         
@@ -548,12 +565,12 @@ route.post('/datascrap', async (req, res) => {
 
         })
         let profileImage = await page.evaluate(() => {
-            return document.querySelector('img[data-qa-target="ProviderImage"]')?.src
+            return document.querySelector('#summary-section img')?.src
 
         })
 
 
-         await page.click('.about-me-bio-read-more')
+         //await page.click('.about-me-bio-read-more')
 
         // page.evaluate(async () => {
         //     await Promise.all([
@@ -566,7 +583,7 @@ route.post('/datascrap', async (req, res) => {
 
         let about = await page.evaluate(async () => {
              //Array.from(document.querySelectorAll('.about-me-bio-read-more')).map(x=>x?.click())
-            return document.querySelector('#learn-bio')?.textContent
+            return document.querySelector('p[data-qa-target="premium-biography"]')?.textContent
         })
 
         const education = await page.evaluate(() => {
