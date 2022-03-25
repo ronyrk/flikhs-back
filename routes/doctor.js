@@ -536,7 +536,7 @@ route.post('/datascrap', async (req, res) => {
         let address = await page.evaluate(() => {
             let parent = document.querySelector('.address .office-title')
             // console.log(parent);
-            
+           
              
             
             if(parent){
@@ -551,15 +551,21 @@ route.post('/datascrap', async (req, res) => {
             }
            
         })
-        
+       
+        //await page.click('.about-me-bio-read-more')
+        //  await page.evaluate(() => {
+        // })
         let phone = await page.evaluate(() => {
+            document.querySelector('#summary-section > div.hg-right-bar-layout > div > div.inline-contact-container.inline-contact-container-specialty > div.summary-column.location-container > div.summary-standard-button-row > a')?.click()
             let num1 = document.querySelector('div[data-qa-target="new-number"]')?.textContent||null
-            let num2 = document.querySelector('a.hg-track.detail-link.phone-number')?.textContent||null
-            return num1 || num2
+            let num2 = document.querySelector('#summary-section > div.hg-right-bar-layout > div > div.inline-contact-container.inline-contact-container-specialty > div.summary-column.location-container > div.summary-standard-button-row > a')?.textContent
+
+            return num1 ? num1: num2
             
 
         })
-        
+       
+
         let newPatient = await page.evaluate(() => {
             return Boolean(document.querySelector('#first-sidebar-container > div:nth-child(1) > div > div > span')?.textContent)
 
