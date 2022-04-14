@@ -46,7 +46,7 @@ route.get('/initialdata', async (req, res) => {
 //---------------------------------------------------------------------------------------------------------------
 
 route.post("/create", (req, res) => {
-    let { general, about, education, hospital, experience, language, social, category, profileImage } = req.body
+    let { general, about, education, hospital,affiliatedHospital, experience, language, social, category, profileImage } = req.body
 
     if (!general.name) {
         return res.status(400).json({ error: "Name is required" })
@@ -57,6 +57,7 @@ route.post("/create", (req, res) => {
         about,
         education,
         hospital,
+        affiliatedHospital,
         experience,
         language,
         social,
@@ -79,7 +80,7 @@ route.post("/create", (req, res) => {
 //---------------------------------------------------------------------------------------------------------------
 
 route.patch("/update/:id", (req, res) => {
-    let { general, about, education, hospital, experience, language, social, category, profileImage, isApproved } = req.body
+    let { general, about, education, hospital,affiliatedHospital, experience, language, social, category, profileImage, isApproved } = req.body
     let id = req.params.id
     if (!general.name) {
         return res.status(400).json({ error: "Name is required" })
@@ -90,6 +91,7 @@ route.patch("/update/:id", (req, res) => {
         about,
         education,
         hospital,
+        affiliatedHospital,
         experience,
         language,
         social,
@@ -534,7 +536,7 @@ route.post('/datascrap', async (req, res) => {
             return document.querySelector('span.summary-header-row-gender-age span[data-qa-target="ProviderDisplayAge"]')?.textContent
         })
         let address = await page.evaluate(() => {
-            let parent = document.querySelector('.address .office-title')
+            let parent = document.querySelector('.address')
             // console.log(parent);
            
              
@@ -551,16 +553,18 @@ route.post('/datascrap', async (req, res) => {
             }
            
         })
+
+        
        
-        //await page.click('.about-me-bio-read-more')
-        //  await page.evaluate(() => {
-        // })
+       // await page.click('#summary-section > div.standard-summary-2-width-container > div.hg-right-bar-layout > div > div > div.summary-standard-2-badges-desktop > div.summary-standard-2-button-row > a')
+        
         let phone = await page.evaluate(() => {
             document.querySelector('#summary-section > div.hg-right-bar-layout > div > div.inline-contact-container.inline-contact-container-specialty > div.summary-column.location-container > div.summary-standard-button-row > a')?.click()
             let num1 = document.querySelector('div[data-qa-target="new-number"]')?.textContent||null
             let num2 = document.querySelector('#summary-section > div.hg-right-bar-layout > div > div.inline-contact-container.inline-contact-container-specialty > div.summary-column.location-container > div.summary-standard-button-row > a')?.textContent
+            let num3 = document.querySelector('#summary-section > div.standard-summary-2-width-container > div.hg-right-bar-layout > div > div > div.summary-standard-2-badges-desktop > div.summary-standard-2-button-row > a')?.textContent
 
-            return num1 ? num1: num2
+            return num1|| num2|| num3
             
 
         })

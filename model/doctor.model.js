@@ -35,6 +35,17 @@ const doctorSchema = new mongoose.Schema({
             toFormat: { type: String, default: "" },
         }
     ],
+    affiliatedHospital: [
+        {
+            hospitalName: { type: String, default: "" },
+            hospitalAddress: { type: String, default: "" },
+            call: { type: String, default: "" },
+            from: { type: String, default: "" },
+            fromFormat: { type: String, default: "" },
+            to: { type: String, default: "" },
+            toFormat: { type: String, default: "" },
+        }
+    ],
     experience: [
         {
             academyName: { type: String, default: "" },
