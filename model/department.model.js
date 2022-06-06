@@ -20,7 +20,8 @@ const departmnetSchema = new mongoose.Schema({
   isFeatured:{
     type:Boolean,
     default:false
-  }
+  },
+  country: [{ type: mongoose.Schema.Types.ObjectId, ref: "Country" }],
 }, { timestamps: true })
 
 
