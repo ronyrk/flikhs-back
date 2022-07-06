@@ -218,7 +218,7 @@ route.get('/singledoctor/:slug', (req, res) => {
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 route.post('/filter', async (req, res) => {
-    let { category, country, city, page, sort_by, limit } = req.body
+    let {specialist : category, country, city, page, sort_by, limit } = req.body
     let categoryFetched
     let countryFetched
     let cityFetched
