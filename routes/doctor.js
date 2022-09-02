@@ -9,6 +9,7 @@ const { usersignin, admin, moderator } = require('../middleware/auth.middleware'
 const mongoose = require('mongoose')
 const shortId = require('shortid')
 const puppeteer = require('puppeteer');
+const districts = require('../assets/districts.json')
 
 const createList = (countries, parentId = null) => {
     const countryList = []
@@ -46,7 +47,7 @@ route.get('/initialdata', async (req, res) => {
 //---------------------------------------------------------------------------------------------------------------
 
 route.post("/create", (req, res) => {
-    let { general, about, education, hospital,affiliatedHospital, experience, language, social, category, profileImage } = req.body
+    let { general, about, education, hospital, affiliatedHospital, experience, language, social, category, profileImage } = req.body
 
     if (!general.name) {
         return res.status(400).json({ error: "Name is required" })
@@ -80,7 +81,7 @@ route.post("/create", (req, res) => {
 //---------------------------------------------------------------------------------------------------------------
 
 route.patch("/update/:id", (req, res) => {
-    let { general, about, education, hospital,affiliatedHospital, experience, language, social, category, profileImage, isApproved } = req.body
+    let { general, about, education, hospital, affiliatedHospital, experience, language, social, category, profileImage, isApproved } = req.body
     let id = req.params.id
     if (!general.name) {
         return res.status(400).json({ error: "Name is required" })
@@ -218,7 +219,7 @@ route.get('/singledoctor/:slug', (req, res) => {
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 route.post('/filter', async (req, res) => {
-    let {specialist : category, country, city, page, sort_by, limit } = req.body
+    let { specialist: category, country, city, page, sort_by, limit } = req.body
     let categoryFetched
     let countryFetched
     let cityFetched
@@ -505,19 +506,19 @@ route.delete('/review/delete/:reviewid', usersignin, (req, res) => {
 
 
 
-route.post('/datascrap', async (req, res) => {
-        if(!req.body.url){
-            return res.status(400).json({error:"Url is required"})
-        }
+route.post('/datascrap/healthgrade', async (req, res) => {
+    if (!req.body.url) {
+        return res.status(400).json({ error: "Url is required" })
+    }
     try {
         const browser = await puppeteer.launch({
             args: [
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
             ],
-          });
+        });
 
-          
+
         const page = await browser.newPage()
         await page.goto(req.body.url)
         let name = await page.evaluate(() => {
@@ -538,37 +539,37 @@ route.post('/datascrap', async (req, res) => {
         let address = await page.evaluate(() => {
             let parent = document.querySelector('.address')
             // console.log(parent);
-           
-             
-            
-            if(parent){
+
+
+
+            if (parent) {
                 let hospitalName = parent.querySelector('a')?.textContent
-                let otherAddress =  Array.from(parent?.querySelectorAll('span')).map(x => x?.textContent)
-                let streetAddress =  Array.from(parent?.querySelectorAll('span.street-address')).map(x => x?.textContent)
+                let otherAddress = Array.from(parent?.querySelectorAll('span')).map(x => x?.textContent)
+                let streetAddress = Array.from(parent?.querySelectorAll('span.street-address')).map(x => x?.textContent)
                 return {
                     hospitalName,
                     streetAddress,
                     otherAddress
                 }
             }
-           
+
         })
 
-        
-       
-       // await page.click('#summary-section > div.standard-summary-2-width-container > div.hg-right-bar-layout > div > div > div.summary-standard-2-badges-desktop > div.summary-standard-2-button-row > a')
-        
+
+
+        // await page.click('#summary-section > div.standard-summary-2-width-container > div.hg-right-bar-layout > div > div > div.summary-standard-2-badges-desktop > div.summary-standard-2-button-row > a')
+
         let phone = await page.evaluate(() => {
             document.querySelector('#summary-section > div.hg-right-bar-layout > div > div.inline-contact-container.inline-contact-container-specialty > div.summary-column.location-container > div.summary-standard-button-row > a')?.click()
-            let num1 = document.querySelector('div[data-qa-target="new-number"]')?.textContent||null
+            let num1 = document.querySelector('div[data-qa-target="new-number"]')?.textContent || null
             let num2 = document.querySelector('#summary-section > div.hg-right-bar-layout > div > div.inline-contact-container.inline-contact-container-specialty > div.summary-column.location-container > div.summary-standard-button-row > a')?.textContent
             let num3 = document.querySelector('#summary-section > div.standard-summary-2-width-container > div.hg-right-bar-layout > div > div > div.summary-standard-2-badges-desktop > div.summary-standard-2-button-row > a')?.textContent
 
-            return num1|| num2|| num3
-            
+            return num1 || num2 || num3
+
 
         })
-       
+
 
         let newPatient = await page.evaluate(() => {
             return Boolean(document.querySelector('#first-sidebar-container > div:nth-child(1) > div > div > span')?.textContent)
@@ -580,7 +581,7 @@ route.post('/datascrap', async (req, res) => {
         })
 
 
-         //await page.click('.about-me-bio-read-more')
+        //await page.click('.about-me-bio-read-more')
 
         // page.evaluate(async () => {
         //     await Promise.all([
@@ -592,7 +593,7 @@ route.post('/datascrap', async (req, res) => {
         // });
 
         let about = await page.evaluate(async () => {
-             //Array.from(document.querySelectorAll('.about-me-bio-read-more')).map(x=>x?.click())
+            //Array.from(document.querySelectorAll('.about-me-bio-read-more')).map(x=>x?.click())
             return document.querySelector('p[data-qa-target="premium-biography"]')?.textContent
         })
 
@@ -644,7 +645,142 @@ route.post('/datascrap', async (req, res) => {
 
 
         browser.close()
-        res.status(200).json({ success: true, name, category, gender, address, phone, newPatient, about, education, language, profileImage, age ,hospital})
+        res.status(200).json({ success: true, name, category, gender, address, phone, newPatient, about, education, language, profileImage, age, hospital })
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({ error: "Something went wrong" })
+    }
+})
+
+
+route.post('/datascrap/doctorbn', async (req, res) => {
+    if (!req.body.url) {
+        return res.status(400).json({ error: "Url is required" })
+    }
+    try {
+
+        const browser = await puppeteer.launch({
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+            ],
+        });
+
+
+        // const browser = await puppeteer.launch({
+        //     executablePath: '/usr/bin/chromium-browser'
+        //   });
+
+
+
+        const page = await browser.newPage()
+        await page.goto(req.body.url)
+        let name = await page.evaluate(() => {
+            return document.querySelector('header.entry-header > div.info > h1')?.textContent
+        })
+        let firstChamberText = await page.evaluate(() => {
+            return document.querySelector('body > div > div.site-inner > div > main > article > div > p:nth-child(3)')?.textContent
+        })
+
+
+        let title = await page.evaluate(() => {
+            return document.querySelector(' header.entry-header > div.info > ul > li:nth-child(1)')?.textContent
+        })
+        
+        let category = await page.evaluate(() => {
+            let cats = document.querySelector('header.entry-header > div.info > ul > li.speciality')?.textContent
+            return cats.split(",")
+        })
+        
+        let city = districts.map(x=>firstChamberText?.search(new RegExp(x, "i")) !== -1 && x )?.find(x=>x)
+        
+        let address = await page.evaluate(() => {
+            return document.querySelector(' div.site-inner > div > main > article > header > div.info > ul > li:nth-child(3)')?.textContent
+        })
+
+
+        let phone = await page.evaluate(() => {
+            return document.querySelector(' body > div > div.site-inner > div > main > article > div > p:first-of-type > a.call-now')?.href
+        })
+
+
+        let about = await page.evaluate(() => {
+            return document.querySelector('div.site-inner > div > main > article > div.entry-content > p:last-of-type')?.textContent
+        })
+        let profileImage = await page.evaluate(() => {
+            return document.querySelector('body > div > div.site-inner > div > main > article > header > div.photo > img')?.src
+        })
+
+
+        let hospital = await page.evaluate(() => {
+            let chambers =  document.querySelectorAll('div.site-inner > div > main > article > div.entry-content > p:not(:last-of-type):not(.free)')
+            if(chambers?.length === 0) return 
+            
+            let array = Promise.all(Array.from(chambers).map(async (chamber) => {
+                let fullText = chamber?.textContent
+                let htmlArray = chamber?.innerHTML?.split("<br>")
+                let value = {
+                    
+                }
+                let hospitalName = chamber?.querySelector('strong > a').textContent?.split(",")[0]
+                let hospitalAddress = htmlArray.find(x=>x.includes("Address"))?.replace("Address:","")?.trim()
+                let visitingHourText = htmlArray.find(x=>x.includes("Visiting Hour"))?.replace("Visiting Hour:","")?.trim()
+                let call = chamber?.querySelector('a.call-now').href
+                
+                if (hospitalName) {
+                    value.hospitalName = hospitalName
+                }
+                if (hospitalAddress) {
+                    value.hospitalAddress = hospitalAddress
+                }
+
+                if(visitingHourText){
+                    let range = visitingHourText.split("(")[0]?.split("to")?.map(x=>x?.trim())
+                    if(range[0]){
+                        value = {
+                            ...value,
+                            from:range[0].match(/\d+/g)[0]||"",
+                            fromFormat:range[0].match(/[a-zA-Z]+/g)[0]||"",
+                        }
+                    }
+
+                    if(range[1]){
+                        value = {
+                            ...value,
+                            to:range[1].match(/\d+/g)[0]||"",
+                            toFormat:range[1].match(/[a-zA-Z]+/g)[0]||"",
+                        }
+                    }
+                   
+                }
+
+                if(call){
+                    value.call = call?.replace("tel:+88","")
+                }
+     
+
+                return value
+            }))
+
+            return array
+        })
+
+       
+
+      
+        res.status(200).json({
+            success:true,
+            name,
+            title,
+            category,
+            city,
+            address,
+            phone:phone?.replace("tel:+88","")||"",
+            about,
+            profileImage,
+            hospital
+        })
+
     } catch (error) {
         console.log(error);
         res.status(400).json({ error: "Something went wrong" })
@@ -652,3 +788,5 @@ route.post('/datascrap', async (req, res) => {
 })
 
 module.exports = route
+
+
