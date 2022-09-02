@@ -687,7 +687,7 @@ route.post('/datascrap/doctorbn', async (req, res) => {
         
         let category = await page.evaluate(() => {
             let cats = document.querySelector('header.entry-header > div.info > ul > li.speciality')?.textContent
-            return cats.split(",")
+            return cats?.split(",")
         })
         
         let city = districts.map(x=>firstChamberText?.search(new RegExp(x, "i")) !== -1 && x )?.find(x=>x)
