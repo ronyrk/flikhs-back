@@ -24,6 +24,6 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm i --production
       # - run: mv .env.prod .env
-      - run: pm2 delete flikhs-back 2> /dev/null || true 
-      - run: pm2 start 'npm start' --name flikhs-back
+      - run: PM2_HOME=/root/.pm2 pm2 delete flikhs-back 2> /dev/null || true 
+      - run: PM2_HOME=/root/.pm2 pm2 start 'npm start' --name flikhs-back
 
