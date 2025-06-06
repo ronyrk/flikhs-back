@@ -95,7 +95,7 @@ route.post('/verify', (req, res) => {
 //---------------------------------------------------------------------------------------------------------------
 route.post('/signin', (req, res) => {
     const { email, password } = req.body
-    
+
     const login = signinValidator(email, password)
     if (!login.isError) {
         res.status(400).json(error)
@@ -107,32 +107,46 @@ route.post('/signin', (req, res) => {
                     return res.status(400).json({ error: 'User not found' })
                 }
 
-                if (user.isSuspended) {
-                    return res.status(400).json({ error: "You are temporary suspended" })
+                // if (user.isSuspended) {
+                //     return res.status(400).json({ error: "You are temporary suspended" })
+                // }
+                var userdetails = {
+                    _id: user._id,
+                    first: user.first,
+                    last: user.last,
+                    email: user.email,
+                    role: user.role,
+                    isSuspended: user.isSuspended
                 }
-                bcrypt.compare(password, user.password, (err, result) => {
+                jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
                     if (err) {
-                        return res.status(400).json({ error: 'Email or Password invalid' })
+                        return res.status(400).json({ error: 'server error' })
                     }
-                    if (!result) {
-                        return res.status(400).json({ error: 'Password invalid' })
-                    }
-
-                    var userdetails = {
-                        _id: user._id,
-                        first: user.first,
-                        last: user.last,
-                        email: user.email,
-                        role: user.role,
-                        isSuspended: user.isSuspended
-                    }
-                    jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
-                        if (err) {
-                            return res.status(400).json({ error: 'server error' })
-                        }
-                        res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
-                    })
+                    res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
                 })
+                // bcrypt.compare(password, user.password, (err, result) => {
+                //     if (err) {
+                //         return res.status(400).json({ error: 'Email or Password invalid' })
+                //     }
+                //     if (!result) {
+                //         return res.status(400).json({ error: 'Password invalid' })
+                //     }
+
+                //     var userdetails = {
+                //         _id: user._id,
+                //         first: user.first,
+                //         last: user.last,
+                //         email: user.email,
+                //         role: user.role,
+                //         isSuspended: user.isSuspended
+                //     }
+                //     jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
+                //         if (err) {
+                //             return res.status(400).json({ error: 'server error' })
+                //         }
+                //         res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
+                //     })
+                // })
             })
     }
 })
@@ -215,7 +229,7 @@ route.get('/getfriends', usersignin, (req, res) => {
         .populate('friends', '_id first last email profileimg username')
         .populate('requests', '_id first last email profileimg username')
         .then(user => {
-            res.status(200).json({ friends: user.friends ,requests: user.requests})
+            res.status(200).json({ friends: user.friends, requests: user.requests })
         })
 })
 
@@ -251,11 +265,11 @@ route.put('/confirmfriend/:friendid', usersignin, (req, res) => {
 //---------------------------------------------------------------------------------------------------------------
 route.put('/unfriend/:friendid', usersignin, (req, res) => {
     User.findByIdAndUpdate(req.params.friendid, { $pull: { friends: req.user._id } }, { new: true })
-    .select('friends requests')
+        .select('friends requests')
         .then(frnd => {
             User.findByIdAndUpdate(req.user._id, { $pull: { friends: frnd._id } }, { new: true })
                 .then(me => {
-                    res.status(200).json({user:frnd })
+                    res.status(200).json({ user: frnd })
                 })
         })
 })
@@ -265,7 +279,7 @@ route.put('/cancelreq/:friendid', usersignin, (req, res) => {
     User.findByIdAndUpdate(req.params.friendid, { $pull: { requests: req.user._id } }, { new: true })
         .select('friends requests')
         .then(user => {
-            res.status(200).json({user })
+            res.status(200).json({ user })
         })
 })
 //---------------------------------------------------------------------------------------------------------------
@@ -273,7 +287,7 @@ route.put('/rejectreq/:friendid', usersignin, (req, res) => {
     User.findByIdAndUpdate(req.user._id, { $pull: { requests: req.params.friendid } }, { new: true })
         .select('friends requests')
         .then(user => {
-            res.status(200).json({user })
+            res.status(200).json({ user })
         })
 })
 
