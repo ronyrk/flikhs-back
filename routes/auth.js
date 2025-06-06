@@ -94,61 +94,87 @@ route.post('/verify', (req, res) => {
 
 //---------------------------------------------------------------------------------------------------------------
 route.post('/signin', (req, res) => {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
-    const login = signinValidator(email, password)
-    if (!login.isError) {
-        res.status(400).json(error)
-    } else {
-        User.findOne({ email })
-            .then(user => {
+    User.findOne({ email })
+        .then(user => {
 
-                if (!user) {
-                    return res.status(400).json({ error: 'User not found' })
+            if (!user) {
+                return res.status(400).json({ error: 'User not found' })
+            }
+
+            // if (user.isSuspended) {
+            //     return res.status(400).json({ error: "You are temporary suspended" })
+            // }
+            var userdetails = {
+                _id: user._id,
+                first: user.first,
+                last: user.last,
+                email: user.email,
+                role: user.role,
+                isSuspended: user.isSuspended
+            }
+            jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
+                if (err) {
+                    return res.status(400).json({ error: 'server error' })
                 }
-
-                // if (user.isSuspended) {
-                //     return res.status(400).json({ error: "You are temporary suspended" })
-                // }
-                var userdetails = {
-                    _id: user._id,
-                    first: user.first,
-                    last: user.last,
-                    email: user.email,
-                    role: user.role,
-                    isSuspended: user.isSuspended
-                }
-                jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
-                    if (err) {
-                        return res.status(400).json({ error: 'server error' })
-                    }
-                    res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
-                })
-                // bcrypt.compare(password, user.password, (err, result) => {
-                //     if (err) {
-                //         return res.status(400).json({ error: 'Email or Password invalid' })
-                //     }
-                //     if (!result) {
-                //         return res.status(400).json({ error: 'Password invalid' })
-                //     }
-
-                //     var userdetails = {
-                //         _id: user._id,
-                //         first: user.first,
-                //         last: user.last,
-                //         email: user.email,
-                //         role: user.role,
-                //         isSuspended: user.isSuspended
-                //     }
-                //     jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
-                //         if (err) {
-                //             return res.status(400).json({ error: 'server error' })
-                //         }
-                //         res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
-                //     })
-                // })
+                res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
             })
-    }
+        })
+
+    // const login = signinValidator(email, password)
+    // if (login.isError) {
+    //     res.status(400).json(error)
+    // } else {
+    //     User.findOne({ email })
+    //         .then(user => {
+
+    //             if (!user) {
+    //                 return res.status(400).json({ error: 'User not found' })
+    //             }
+
+    //             // if (user.isSuspended) {
+    //             //     return res.status(400).json({ error: "You are temporary suspended" })
+    //             // }
+    //             var userdetails = {
+    //                 _id: user._id,
+    //                 first: user.first,
+    //                 last: user.last,
+    //                 email: user.email,
+    //                 role: user.role,
+    //                 isSuspended: user.isSuspended
+    //             }
+    //             jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
+    //                 if (err) {
+    //                     return res.status(400).json({ error: 'server error' })
+    //                 }
+    //                 res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
+    //             })
+    //             // bcrypt.compare(password, user.password, (err, result) => {
+    //             //     if (err) {
+    //             //         return res.status(400).json({ error: 'Email or Password invalid' })
+    //             //     }
+    //             //     if (!result) {
+    //             //         return res.status(400).json({ error: 'Password invalid' })
+    //             //     }
+
+    //             //     var userdetails = {
+    //             //         _id: user._id,
+    //             //         first: user.first,
+    //             //         last: user.last,
+    //             //         email: user.email,
+    //             //         role: user.role,
+    //             //         isSuspended: user.isSuspended
+    //             //     }
+    //             //     jwt.sign(userdetails, process.env.JWT_SECRET, (err, token) => {
+    //             //         if (err) {
+    //             //             return res.status(400).json({ error: 'server error' })
+    //             //         }
+    //             //         res.status(200).json({ token, user: user, profileimg: user.profileimg, success: true })
+    //             //     })
+    //             // })
+    //         })
+    // }
 })
 
 //---------------------------------------------------------------------------------------------------------------
